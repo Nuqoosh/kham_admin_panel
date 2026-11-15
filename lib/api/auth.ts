@@ -1,5 +1,11 @@
 import { apiRequest } from "./client";
-import type { AuthUser, LoginData, LoginRequest } from "./types";
+import type {
+  AuthUser,
+  ForgotPasswordRequest,
+  LoginData,
+  LoginRequest,
+  ResetPasswordRequest,
+} from "./types";
 
 export const authApi = {
   login(payload: LoginRequest) {
@@ -16,5 +22,21 @@ export const authApi = {
 
   logout() {
     return apiRequest<null>("/auth/logout", { method: "POST" });
+  },
+
+  forgotPassword(payload: ForgotPasswordRequest) {
+    return apiRequest<null>("/auth/forgot-password", {
+      method: "POST",
+      body: payload,
+      auth: false,
+    });
+  },
+
+  resetPassword(payload: ResetPasswordRequest) {
+    return apiRequest<null>("/auth/reset-password", {
+      method: "POST",
+      body: payload,
+      auth: false,
+    });
   },
 };

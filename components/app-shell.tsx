@@ -17,6 +17,16 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  PanelsTopLeft,
+  Sparkles,
+  HelpCircle,
+  FlaskConical,
+  Star,
+  Handshake,
+  Mail,
+  Truck,
+  Percent,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
@@ -32,6 +42,16 @@ const NAV = [
   { href: "/inventory", label: "Inventory", icon: Warehouse },
   { href: "/pricing", label: "Pricing", icon: BadgeDollarSign },
   { href: "/coupons", label: "Coupons", icon: TicketPercent },
+  { href: "/homepage", label: "Homepage", icon: PanelsTopLeft },
+  { href: "/rituals", label: "Rituals", icon: Sparkles },
+  { href: "/ritual-quiz", label: "Ritual quiz", icon: HelpCircle },
+  { href: "/ingredients", label: "Ingredients", icon: FlaskConical },
+  { href: "/reviews", label: "Reviews", icon: Star },
+  { href: "/partners", label: "Partners", icon: Handshake },
+  { href: "/newsletter", label: "Newsletter", icon: Mail },
+  { href: "/shipping", label: "Shipping", icon: Truck },
+  { href: "/tax", label: "Tax", icon: Percent },
+  { href: "/finance", label: "Finance", icon: Landmark },
   { href: "/catalog", label: "Settings", icon: Settings2 },
 ];
 
@@ -71,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div
           className={cn(
-            "flex border-b border-cream/10 py-5",
+            "flex shrink-0 border-b border-cream/10 py-5",
             open ? "items-start justify-between gap-2 px-5" : "flex-col items-center gap-3 px-2",
           )}
         >
@@ -119,7 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav
           className={cn(
-            "flex flex-1 flex-col gap-1 overflow-y-auto py-4",
+            "sidebar-nav-scroll flex flex-1 flex-col gap-1 py-4",
             open ? "px-3" : "items-center px-2",
           )}
         >
@@ -148,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div
           className={cn(
-            "border-t border-cream/10 py-4",
+            "shrink-0 border-t border-cream/10 py-4",
             open ? "px-4" : "flex flex-col items-center px-2",
           )}
         >

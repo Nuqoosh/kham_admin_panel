@@ -220,3 +220,74 @@ export function appendFormValue(
   }
   form.append(key, value instanceof Blob ? value : String(value));
 }
+
+type DownloadOptions = {
+  query?: RequestOptions["query"];
+  token?: string | null;
+  auth?: boolean;
+  signal?: AbortSignal;
+  filename?: string;
+};
+
+/**
+ * Authenticated binary/text download for endpoints that do not return ApiSuccess JSON
+ * (e.g. finance CSV export).
+ */
+export async function apiDownload(
+  path: string,
+  options: DownloadOptions = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  const { query, auth = true, signal, filename } = options;
+  const headers: Record<string, string> = {
+    Accept: "*/*",
+  };
+
+  const token = options.token !== undefined ? options.token : getToken();
+  if (auth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(buildUrl(path, query), {
+    method: "GET",
+    headers,
+    signal,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 && auth) {
+      emitUnauthorized();
+    }
+
+    let message = `Download failed with status ${response.status}`;
+    let code = "UNKNOWN";
+    let errors: Record<string, string[]> = {};
+    let body: ApiErrorBody | null = null;
+    try {
+      const json = (await response.json()) as ApiErrorBody;
+      if (json && json.success === false) {
+        body = json;
+        message = json.message || message;
+        code = json.code || code;
+        errors = json.errors || {};
+      }
+    } catch {
+      // non-JSON error body
+    }
+
+    throw new ApiClientError(message, {
+      status: response.status,
+      code,
+      errors,
+      body,
+    });
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition");
+  const matched = disposition?.match(/filename\*?=(?:UTF-8''|")?([^\";]+)/i);
+  const resolvedName =
+    filename ||
+    (matched ? decodeURIComponent(matched[1].replace(/"/g, "")) : null);
+
+  return { blob, filename: resolvedName };
+}

@@ -137,15 +137,24 @@ export function ProductForm({
   const warehouseItems = unwrapList(warehouses.data);
 
   const [name, setName] = useState("");
+  const [nameAr, setNameAr] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [status, setStatus] = useState<ProductStatus>("draft");
   const [brandId, setBrandId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [shortDescription, setShortDescription] = useState("");
+  const [shortDescriptionAr, setShortDescriptionAr] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
   const [ingredients, setIngredients] = useState("");
+  const [ingredientsAr, setIngredientsAr] = useState("");
   const [usage, setUsage] = useState("");
+  const [usageAr, setUsageAr] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoTitleAr, setSeoTitleAr] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
+  const [seoDescriptionAr, setSeoDescriptionAr] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
   const [variants, setVariants] = useState<VariantRow[]>([emptyVariant()]);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
@@ -156,6 +165,7 @@ export function ProductForm({
   useEffect(() => {
     if (!initial) return;
     setName(String(initial.name ?? ""));
+    setNameAr(String(initial.name_ar ?? ""));
     setSlug(String(initial.slug ?? ""));
     setSlugTouched(true);
     setStatus((initial.status as ProductStatus) || "draft");
@@ -164,9 +174,17 @@ export function ProductForm({
       initial.category_id != null ? String(initial.category_id) : "",
     );
     setShortDescription(String(initial.short_description ?? ""));
+    setShortDescriptionAr(String(initial.short_description_ar ?? ""));
     setDescription(String(initial.description ?? ""));
+    setDescriptionAr(String(initial.description_ar ?? ""));
     setIngredients(String(initial.ingredients ?? ""));
+    setIngredientsAr(String(initial.ingredients_ar ?? ""));
     setUsage(String(initial.usage_instructions ?? ""));
+    setUsageAr(String(initial.usage_instructions_ar ?? ""));
+    setSeoTitle(String(initial.seo_title ?? ""));
+    setSeoTitleAr(String(initial.seo_title_ar ?? ""));
+    setSeoDescription(String(initial.seo_description ?? ""));
+    setSeoDescriptionAr(String(initial.seo_description_ar ?? ""));
     setTrackInventory(Boolean(initial.track_inventory ?? true));
 
     const existing = Array.isArray(initial.variants)
@@ -282,14 +300,23 @@ export function ProductForm({
 
     const payload: ProductMultipartInput = {
       name: name.trim(),
+      name_ar: emptyToNull(nameAr),
       slug: slug.trim() || slugify(name),
       status,
       brand_id: brandId ? Number(brandId) : null,
       category_id: categoryId ? Number(categoryId) : null,
       short_description: emptyToNull(shortDescription),
+      short_description_ar: emptyToNull(shortDescriptionAr),
       description: emptyToNull(description),
+      description_ar: emptyToNull(descriptionAr),
       ingredients: emptyToNull(ingredients),
+      ingredients_ar: emptyToNull(ingredientsAr),
       usage_instructions: emptyToNull(usage),
+      usage_instructions_ar: emptyToNull(usageAr),
+      seo_title: emptyToNull(seoTitle),
+      seo_title_ar: emptyToNull(seoTitleAr),
+      seo_description: emptyToNull(seoDescription),
+      seo_description_ar: emptyToNull(seoDescriptionAr),
       track_inventory: trackInventory,
       variants: cleanedVariants,
       images: imageDrafts.map((d) => d.file),
@@ -327,18 +354,29 @@ export function ProductForm({
       <FormAlert error={error} fieldErrors={fieldErrors} />
 
       <div className="space-y-4 rounded-xl bg-paper p-6 ring-1 ring-border">
-        <FormField label="Name" htmlFor="name">
-          <Input
-            id="name"
-            required
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (!slugTouched) setSlug(slugify(e.target.value));
-            }}
-          />
-          <FieldHint error={fieldErrors.name} />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Name" htmlFor="name">
+            <Input
+              id="name"
+              required
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+            />
+            <FieldHint error={fieldErrors.name} />
+          </FormField>
+          <FormField label="Name (AR)" htmlFor="name-ar">
+            <Input
+              id="name-ar"
+              dir="rtl"
+              value={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+            />
+            <FieldHint error={fieldErrors.name_ar} />
+          </FormField>
+        </div>
 
         <FormField label="Slug" htmlFor="slug">
           <Input
@@ -397,41 +435,120 @@ export function ProductForm({
           </FormField>
         </div>
 
-        <FormField label="Short description" htmlFor="short">
-          <Textarea
-            id="short"
-            rows={2}
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Short description" htmlFor="short">
+            <Textarea
+              id="short"
+              rows={2}
+              value={shortDescription}
+              onChange={(e) => setShortDescription(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Short description (AR)" htmlFor="short-ar">
+            <Textarea
+              id="short-ar"
+              dir="rtl"
+              rows={2}
+              value={shortDescriptionAr}
+              onChange={(e) => setShortDescriptionAr(e.target.value)}
+            />
+          </FormField>
+        </div>
 
-        <FormField label="Description" htmlFor="description">
-          <Textarea
-            id="description"
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Description" htmlFor="description">
+            <Textarea
+              id="description"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Description (AR)" htmlFor="description-ar">
+            <Textarea
+              id="description-ar"
+              dir="rtl"
+              rows={4}
+              value={descriptionAr}
+              onChange={(e) => setDescriptionAr(e.target.value)}
+            />
+          </FormField>
+        </div>
 
-        <FormField label="Ingredients" htmlFor="ingredients">
-          <Textarea
-            id="ingredients"
-            rows={3}
-            value={ingredients}
-            onChange={(e) => setIngredients(e.target.value)}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Ingredients" htmlFor="ingredients">
+            <Textarea
+              id="ingredients"
+              rows={3}
+              value={ingredients}
+              onChange={(e) => setIngredients(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Ingredients (AR)" htmlFor="ingredients-ar">
+            <Textarea
+              id="ingredients-ar"
+              dir="rtl"
+              rows={3}
+              value={ingredientsAr}
+              onChange={(e) => setIngredientsAr(e.target.value)}
+            />
+          </FormField>
+        </div>
 
-        <FormField label="Usage instructions" htmlFor="usage">
-          <Textarea
-            id="usage"
-            rows={3}
-            value={usage}
-            onChange={(e) => setUsage(e.target.value)}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Usage instructions" htmlFor="usage">
+            <Textarea
+              id="usage"
+              rows={3}
+              value={usage}
+              onChange={(e) => setUsage(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Usage instructions (AR)" htmlFor="usage-ar">
+            <Textarea
+              id="usage-ar"
+              dir="rtl"
+              rows={3}
+              value={usageAr}
+              onChange={(e) => setUsageAr(e.target.value)}
+            />
+          </FormField>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="SEO title" htmlFor="seo-title">
+            <Input
+              id="seo-title"
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+            />
+          </FormField>
+          <FormField label="SEO title (AR)" htmlFor="seo-title-ar">
+            <Input
+              id="seo-title-ar"
+              dir="rtl"
+              value={seoTitleAr}
+              onChange={(e) => setSeoTitleAr(e.target.value)}
+            />
+          </FormField>
+          <FormField label="SEO description" htmlFor="seo-description">
+            <Textarea
+              id="seo-description"
+              rows={2}
+              value={seoDescription}
+              onChange={(e) => setSeoDescription(e.target.value)}
+            />
+          </FormField>
+          <FormField label="SEO description (AR)" htmlFor="seo-description-ar">
+            <Textarea
+              id="seo-description-ar"
+              dir="rtl"
+              rows={2}
+              value={seoDescriptionAr}
+              onChange={(e) => setSeoDescriptionAr(e.target.value)}
+            />
+          </FormField>
+        </div>
 
         <label className="flex items-center gap-3 text-sm text-ink">
           <input

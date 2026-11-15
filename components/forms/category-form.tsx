@@ -41,12 +41,14 @@ export function CategoryForm({
   );
 
   const [name, setName] = useState("");
+  const [nameAr, setNameAr] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [parentId, setParentId] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
   const [imageUrl, setImageUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -57,6 +59,7 @@ export function CategoryForm({
   useEffect(() => {
     if (!initial) return;
     setName(String(initial.name ?? ""));
+    setNameAr(String(initial.name_ar ?? ""));
     setSlug(String(initial.slug ?? ""));
     setSlugTouched(true);
     setParentId(initial.parent_id != null ? String(initial.parent_id) : "");
@@ -65,6 +68,7 @@ export function CategoryForm({
     );
     setImageUrl(String(initial.image_url ?? ""));
     setDescription(String(initial.description ?? ""));
+    setDescriptionAr(String(initial.description_ar ?? ""));
     setIsActive(initial.is_active !== false);
   }, [initial]);
 
@@ -88,22 +92,26 @@ export function CategoryForm({
       if (mode === "create") {
         await catalogApi.createCategory({
           name: name.trim(),
+          name_ar: emptyToNull(nameAr),
           slug: slug.trim() || slugify(name),
           parent_id: parentId ? Number(parentId) : null,
           sort_order: parseOptionalNumber(sortOrder) ?? 0,
           image_url: emptyToNull(imageUrl),
           description: emptyToNull(description),
+          description_ar: emptyToNull(descriptionAr),
           is_active: isActive,
           image,
         });
       } else if (categoryId) {
         await catalogApi.updateCategory(categoryId, {
           name: name.trim(),
+          name_ar: emptyToNull(nameAr),
           slug: slug.trim() || slugify(name),
           parent_id: parentId ? Number(parentId) : null,
           sort_order: parseOptionalNumber(sortOrder) ?? 0,
           image_url: emptyToNull(imageUrl),
           description: emptyToNull(description),
+          description_ar: emptyToNull(descriptionAr),
           is_active: isActive,
         });
         if (image) {
@@ -152,17 +160,27 @@ export function CategoryForm({
       <FormAlert error={error} fieldErrors={fieldErrors} />
 
       <div className="space-y-4 rounded-xl bg-paper p-6 ring-1 ring-border">
-        <FormField label="Name" htmlFor="name">
-          <Input
-            id="name"
-            required
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (!slugTouched) setSlug(slugify(e.target.value));
-            }}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Name" htmlFor="name">
+            <Input
+              id="name"
+              required
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+            />
+          </FormField>
+          <FormField label="Name (AR)" htmlFor="name-ar">
+            <Input
+              id="name-ar"
+              dir="rtl"
+              value={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+            />
+          </FormField>
+        </div>
         <FormField label="Slug" htmlFor="slug">
           <Input
             id="slug"
@@ -212,6 +230,15 @@ export function CategoryForm({
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+          />
+        </FormField>
+        <FormField label="Description (AR)" htmlFor="description-ar">
+          <Textarea
+            id="description-ar"
+            dir="rtl"
+            rows={4}
+            value={descriptionAr}
+            onChange={(e) => setDescriptionAr(e.target.value)}
           />
         </FormField>
         <label className="flex items-center gap-3 text-sm">

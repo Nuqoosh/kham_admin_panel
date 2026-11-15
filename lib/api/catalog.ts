@@ -6,9 +6,11 @@ function buildCategoryFormData(
 ): FormData {
   const form = new FormData();
   appendFormValue(form, "name", payload.name);
+  appendFormValue(form, "name_ar", payload.name_ar);
   appendFormValue(form, "slug", payload.slug);
   appendFormValue(form, "parent_id", payload.parent_id);
   appendFormValue(form, "description", payload.description);
+  appendFormValue(form, "description_ar", payload.description_ar);
   appendFormValue(form, "image_url", payload.image_url);
   appendFormValue(form, "sort_order", payload.sort_order);
   appendFormValue(form, "is_active", payload.is_active);
@@ -23,9 +25,11 @@ function buildBrandFormData(
 ): FormData {
   const form = new FormData();
   appendFormValue(form, "name", payload.name);
+  appendFormValue(form, "name_ar", payload.name_ar);
   appendFormValue(form, "slug", payload.slug);
   appendFormValue(form, "origin_country", payload.origin_country);
   appendFormValue(form, "description", payload.description);
+  appendFormValue(form, "description_ar", payload.description_ar);
   appendFormValue(form, "logo_url", payload.logo_url);
   appendFormValue(form, "is_active", payload.is_active);
   if (payload.image) {

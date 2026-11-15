@@ -83,15 +83,22 @@ export type ProductRequest = {
   brand_id?: number | null;
   category_id?: number | null;
   name: string;
+  name_ar?: string | null;
   slug: string;
   short_description?: string | null;
+  short_description_ar?: string | null;
   description?: string | null;
+  description_ar?: string | null;
   ingredients?: string | null;
+  ingredients_ar?: string | null;
   usage_instructions?: string | null;
+  usage_instructions_ar?: string | null;
   status: ProductStatus;
   track_inventory?: boolean;
   seo_title?: string | null;
+  seo_title_ar?: string | null;
   seo_description?: string | null;
+  seo_description_ar?: string | null;
   metadata?: Record<string, unknown> | null;
   variants?: ProductVariantInput[];
 };
@@ -192,9 +199,11 @@ export type DashboardData = {
 
 export type CategoryInput = {
   name: string;
+  name_ar?: string | null;
   slug: string;
   parent_id?: number | null;
   description?: string | null;
+  description_ar?: string | null;
   image_url?: string | null;
   sort_order?: number | null;
   is_active?: boolean;
@@ -202,9 +211,11 @@ export type CategoryInput = {
 
 export type BrandInput = {
   name: string;
+  name_ar?: string | null;
   slug: string;
   origin_country?: string | null;
   description?: string | null;
+  description_ar?: string | null;
   logo_url?: string | null;
   is_active?: boolean;
 };
@@ -237,4 +248,217 @@ export type ListParams = {
   per_page?: number;
   page?: number;
   [key: string]: string | number | boolean | undefined | null;
+};
+
+/** Password recovery */
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+export type ResetPasswordRequest = {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+};
+
+/** Homepage CMS */
+export type HomepageSectionType =
+  | "hero"
+  | "banner"
+  | "featured"
+  | "promotion"
+  | "editorial"
+  | "custom";
+
+export type HomepageSectionInput = {
+  key: string;
+  type: HomepageSectionType;
+  title_en: string;
+  title_ar?: string | null;
+  subtitle_en?: string | null;
+  subtitle_ar?: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
+  content?: Record<string, unknown> | null;
+  sort_order?: number;
+  is_published?: boolean;
+};
+
+/** Partners */
+export type PartnerType =
+  | "retailer"
+  | "distributor"
+  | "influencer"
+  | "corporate"
+  | "other";
+
+export type PartnerApplicationStatus =
+  | "pending"
+  | "in_review"
+  | "approved"
+  | "rejected";
+
+export type PartnerApplicationUpdateRequest = {
+  status: PartnerApplicationStatus;
+  internal_notes?: string | null;
+};
+
+/** Newsletter */
+export type NewsletterSubscriberStatus = "subscribed" | "unsubscribed";
+
+export type NewsletterSubscriberUpdateRequest = {
+  status: NewsletterSubscriberStatus;
+};
+
+/** Product reviews (CRM) */
+export type ProductReviewStatus = "pending" | "approved" | "rejected";
+
+export type ProductReviewCreateRequest = {
+  order_item_id: number;
+  rating: number;
+  title?: string | null;
+  body?: string | null;
+};
+
+export type ProductReviewModerateRequest = {
+  status: "approved" | "rejected";
+};
+
+/** Rituals */
+export type RitualStepInput = {
+  title: string;
+  title_ar?: string | null;
+  instructions: string;
+  instructions_ar?: string | null;
+  sort_order?: number;
+};
+
+export type RitualProductInput = {
+  product_id: number;
+  sort_order?: number;
+};
+
+export type RitualInput = {
+  slug: string;
+  title: string;
+  title_ar?: string | null;
+  description?: string | null;
+  description_ar?: string | null;
+  image_url?: string | null;
+  is_published?: boolean;
+  sort_order?: number;
+  steps?: RitualStepInput[];
+  products?: RitualProductInput[];
+};
+
+/** Ritual quiz */
+export type RitualQuizQuestionInput = {
+  question: string;
+  question_ar?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+};
+
+export type RitualQuizOptionInput = {
+  label: string;
+  label_ar?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+};
+
+export type RitualQuizOptionProductSync = {
+  products: Array<{ product_id: number; weight: number }>;
+};
+
+/** Ingredients */
+export type IngredientInput = {
+  slug: string;
+  name: string;
+  name_ar?: string | null;
+  description?: string | null;
+  description_ar?: string | null;
+  is_active?: boolean;
+};
+
+/** CRM checkout quote */
+export type CheckoutQuoteRequest = {
+  market_id: number;
+  coupon_code?: string | null;
+  items: Array<{ variant_id: number; quantity: number }>;
+  shipping_address: {
+    country_code: string;
+    city: string;
+  };
+};
+
+/** Shipping rules */
+export type ShippingRuleCreateRequest = {
+  market_id: number;
+  city: string;
+  shipping_fee: number;
+  free_shipping_threshold?: number | null;
+  is_active?: boolean;
+};
+
+export type ShippingRuleUpdateRequest = {
+  shipping_fee?: number;
+  free_shipping_threshold?: number | null;
+  is_active?: boolean;
+};
+
+/** Market tax */
+export type MarketTaxRuleUpsertRequest = {
+  rate_percent: number;
+  calculation_method: "exclusive" | "inclusive";
+  tax_shipping: boolean;
+};
+
+export type ConfirmActionRequest = {
+  confirm: true | 1 | "1" | "true" | "on" | "yes";
+};
+
+/** Finance */
+export type FinanceReportParams = {
+  market_id: number;
+  period?: "daily" | "weekly" | "monthly" | "custom";
+  from?: string;
+  to?: string;
+};
+
+export type FinanceExpenseCreateRequest = {
+  market_id: number;
+  category: string;
+  description: string;
+  amount: number;
+  incurred_on: string;
+  reference?: string | null;
+};
+
+export type FinanceExpenseUpdateRequest = {
+  category?: string;
+  description?: string;
+  amount?: number;
+  incurred_on?: string;
+  reference?: string | null;
+};
+
+export type FinanceItemCostRequest = {
+  unit_cost_snapshot: number;
+  unit_cost_currency_code: string;
+};
+
+/** Refunds */
+export type RefundRequestCreate = {
+  reason: string;
+};
+
+/** MyFatoorah sandbox (local/testing only) */
+export type MyFatoorahSandboxHostedRequest = {
+  idempotency_key: string;
+  payment_method?: "CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "KNET";
+};
+
+export type MyFatoorahProviderEnquiryRequest = {
+  payment_id: string;
 };

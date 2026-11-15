@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ImagePlus, Package } from "lucide-react";
+import { FileText, ImagePlus, Package } from "lucide-react";
 import { productsApi } from "@/lib/api";
 import { getFormErrorMessage } from "@/lib/form";
 import { useApi } from "@/lib/hooks/use-api";
+import { resolveMediaUrl } from "@/lib/media";
 import { BackLink, PageHeader } from "@/components/page-header";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,84 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+function textValue(value: unknown): string | null {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function hasArabicScript(text: string): boolean {
+  return /[\u0600-\u06FF]/.test(text);
+}
+
+function relatedName(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  return textValue((value as Record<string, unknown>).name);
+}
+
+function MetaItem({ label, value }: { label: string; value: unknown }) {
+  const text = textValue(value);
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1.5 truncate text-sm text-ink">{text ?? "—"}</dd>
+    </div>
+  );
+}
+
+function LocalePane({
+  locale,
+  value,
+}: {
+  locale: "en" | "ar";
+  value: unknown;
+}) {
+  const text = textValue(value);
+  const rtl = locale === "ar" && (!!text ? hasArabicScript(text) : true);
+
+  return (
+    <div
+      dir={rtl ? "rtl" : "ltr"}
+      className="rounded-xl bg-cream/55 px-4 py-3.5 ring-1 ring-border/70"
+    >
+      <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        {locale === "en" ? "English" : "Arabic"}
+      </p>
+      {text ? (
+        <p className="mt-2 text-sm leading-7 text-ink/90 whitespace-pre-wrap">
+          {text}
+        </p>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">Not set</p>
+      )}
+    </div>
+  );
+}
+
+function BilingualField({
+  title,
+  en,
+  ar,
+}: {
+  title: string;
+  en: unknown;
+  ar: unknown;
+}) {
+  return (
+    <div className="space-y-3">
+      <h3 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-brown">
+        {title}
+      </h3>
+      <div className="grid gap-3 md:grid-cols-2">
+        <LocalePane locale="en" value={en} />
+        <LocalePane locale="ar" value={ar} />
+      </div>
+    </div>
+  );
+}
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -44,6 +123,10 @@ export default function ProductDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isArchived = String(product?.status ?? "") === "archived";
+  const brandName =
+    relatedName(product?.brand) ?? textValue(product?.brand_id);
+  const categoryName =
+    relatedName(product?.category) ?? textValue(product?.category_id);
 
   async function onArchive() {
     setActionError(null);
@@ -109,7 +192,6 @@ export default function ProductDetailPage() {
           <PageHeader
             eyebrow="Catalog"
             title={String(product.name ?? "Product")}
-            description={String(product.short_description ?? product.slug ?? "")}
             actions={
               <>
                 <Link
@@ -139,12 +221,17 @@ export default function ProductDetailPage() {
             }
           />
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Badge variant="secondary" className="uppercase tracking-[0.12em]">
               {String(product.status)}
             </Badge>
+            {product.track_inventory ? (
+              <Badge variant="secondary" className="uppercase tracking-[0.12em]">
+                Inventory tracked
+              </Badge>
+            ) : null}
             <span className="text-sm text-muted-foreground">
-              slug: {String(product.slug)}
+              Slug · {String(product.slug ?? "—")}
             </span>
           </div>
 
@@ -152,11 +239,66 @@ export default function ProductDetailPage() {
             <p className="text-sm text-destructive">{actionError}</p>
           ) : null}
 
-          {product.description ? (
-            <p className="max-w-3xl text-sm leading-relaxed text-ink/80">
-              {String(product.description)}
-            </p>
-          ) : null}
+          <section className="overflow-hidden rounded-2xl bg-paper ring-1 ring-border">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-4 sm:px-6">
+              <FileText className="size-5 shrink-0 text-ink" strokeWidth={1.4} />
+              <h2 className="font-display text-2xl text-ink">Details</h2>
+            </div>
+
+            <dl className="grid gap-4 border-b border-border bg-cream/35 px-5 py-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+              <MetaItem label="Brand" value={brandName} />
+              <MetaItem label="Category" value={categoryName} />
+              <MetaItem label="Slug" value={product.slug} />
+              <MetaItem
+                label="Inventory"
+                value={product.track_inventory ? "Tracked" : "Not tracked"}
+              />
+            </dl>
+
+            <div className="space-y-8 px-5 py-6 sm:px-6">
+              <BilingualField
+                title="Name"
+                en={product.name}
+                ar={product.name_ar}
+              />
+              <BilingualField
+                title="Short description"
+                en={product.short_description}
+                ar={product.short_description_ar}
+              />
+              <BilingualField
+                title="Description"
+                en={product.description}
+                ar={product.description_ar}
+              />
+              <BilingualField
+                title="Ingredients"
+                en={product.ingredients}
+                ar={product.ingredients_ar}
+              />
+              <BilingualField
+                title="Usage instructions"
+                en={product.usage_instructions}
+                ar={product.usage_instructions_ar}
+              />
+            </div>
+
+            <div className="space-y-8 border-t border-border px-5 py-6 sm:px-6">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-brown">
+                SEO
+              </p>
+              <BilingualField
+                title="SEO title"
+                en={product.seo_title}
+                ar={product.seo_title_ar}
+              />
+              <BilingualField
+                title="SEO description"
+                en={product.seo_description}
+                ar={product.seo_description_ar}
+              />
+            </div>
+          </section>
 
           <section className="space-y-4 rounded-2xl bg-paper p-5 ring-1 ring-border sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -193,7 +335,7 @@ export default function ProductDetailPage() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={String(item.url ?? "")}
+                      src={resolveMediaUrl(String(item.url ?? ""))}
                       alt={String(item.alt_text ?? "")}
                       className="aspect-square w-full object-contain"
                     />

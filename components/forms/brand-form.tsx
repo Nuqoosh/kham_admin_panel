@@ -29,11 +29,13 @@ export function BrandForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [nameAr, setNameAr] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [origin, setOrigin] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -44,11 +46,13 @@ export function BrandForm({
   useEffect(() => {
     if (!initial) return;
     setName(String(initial.name ?? ""));
+    setNameAr(String(initial.name_ar ?? ""));
     setSlug(String(initial.slug ?? ""));
     setSlugTouched(true);
     setOrigin(String(initial.origin_country ?? ""));
     setLogoUrl(String(initial.logo_url ?? ""));
     setDescription(String(initial.description ?? ""));
+    setDescriptionAr(String(initial.description_ar ?? ""));
     setIsActive(initial.is_active !== false);
   }, [initial]);
 
@@ -72,20 +76,24 @@ export function BrandForm({
       if (mode === "create") {
         await catalogApi.createBrand({
           name: name.trim(),
+          name_ar: emptyToNull(nameAr),
           slug: slug.trim() || slugify(name),
           origin_country: emptyToNull(origin)?.toUpperCase() ?? null,
           logo_url: emptyToNull(logoUrl),
           description: emptyToNull(description),
+          description_ar: emptyToNull(descriptionAr),
           is_active: isActive,
           image,
         });
       } else if (brandId) {
         await catalogApi.updateBrand(brandId, {
           name: name.trim(),
+          name_ar: emptyToNull(nameAr),
           slug: slug.trim() || slugify(name),
           origin_country: emptyToNull(origin)?.toUpperCase() ?? null,
           logo_url: emptyToNull(logoUrl),
           description: emptyToNull(description),
+          description_ar: emptyToNull(descriptionAr),
           is_active: isActive,
         });
         if (image) {
@@ -134,17 +142,27 @@ export function BrandForm({
       <FormAlert error={error} fieldErrors={fieldErrors} />
 
       <div className="space-y-4 rounded-xl bg-paper p-6 ring-1 ring-border">
-        <FormField label="Name" htmlFor="name">
-          <Input
-            id="name"
-            required
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (!slugTouched) setSlug(slugify(e.target.value));
-            }}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Name" htmlFor="name">
+            <Input
+              id="name"
+              required
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+            />
+          </FormField>
+          <FormField label="Name (AR)" htmlFor="name-ar">
+            <Input
+              id="name-ar"
+              dir="rtl"
+              value={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+            />
+          </FormField>
+        </div>
         <FormField label="Slug" htmlFor="slug">
           <Input
             id="slug"
@@ -181,6 +199,15 @@ export function BrandForm({
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+          />
+        </FormField>
+        <FormField label="Description (AR)" htmlFor="description-ar">
+          <Textarea
+            id="description-ar"
+            dir="rtl"
+            rows={4}
+            value={descriptionAr}
+            onChange={(e) => setDescriptionAr(e.target.value)}
           />
         </FormField>
         <label className="flex items-center gap-3 text-sm">

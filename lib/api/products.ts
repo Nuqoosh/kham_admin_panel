@@ -5,17 +5,24 @@ function buildProductFormData(payload: ProductMultipartInput): FormData {
   const form = new FormData();
 
   appendFormValue(form, "name", payload.name);
+  appendFormValue(form, "name_ar", payload.name_ar);
   appendFormValue(form, "slug", payload.slug);
   appendFormValue(form, "status", payload.status);
   appendFormValue(form, "brand_id", payload.brand_id);
   appendFormValue(form, "category_id", payload.category_id);
   appendFormValue(form, "short_description", payload.short_description);
+  appendFormValue(form, "short_description_ar", payload.short_description_ar);
   appendFormValue(form, "description", payload.description);
+  appendFormValue(form, "description_ar", payload.description_ar);
   appendFormValue(form, "ingredients", payload.ingredients);
+  appendFormValue(form, "ingredients_ar", payload.ingredients_ar);
   appendFormValue(form, "usage_instructions", payload.usage_instructions);
+  appendFormValue(form, "usage_instructions_ar", payload.usage_instructions_ar);
   appendFormValue(form, "track_inventory", payload.track_inventory);
   appendFormValue(form, "seo_title", payload.seo_title);
+  appendFormValue(form, "seo_title_ar", payload.seo_title_ar);
   appendFormValue(form, "seo_description", payload.seo_description);
+  appendFormValue(form, "seo_description_ar", payload.seo_description_ar);
 
   if (payload.metadata != null) {
     form.append("metadata", JSON.stringify(payload.metadata));

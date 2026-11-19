@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   catalogApi,
+  ingredientsApi,
   productsApi,
   type ProductMultipartInput,
   type ProductStatus,
@@ -26,6 +27,7 @@ import { FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SelectNative } from "@/components/ui/select-native";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 
 type PriceRow = {
   market_id: string;
@@ -126,6 +128,10 @@ export function ProductForm({
   const markets = useApi(() => catalogApi.markets(), []);
   const currencies = useApi(() => catalogApi.currencies(), []);
   const warehouses = useApi(() => catalogApi.warehouses(), []);
+  const ingredientsCatalog = useApi(
+    () => ingredientsApi.list({ per_page: 100 }),
+    [],
+  );
 
   const brandItems = unwrapList(brands.data);
   const categoryItems = useMemo(
@@ -135,6 +141,7 @@ export function ProductForm({
   const marketItems = unwrapList(markets.data);
   const currencyItems = unwrapList(currencies.data);
   const warehouseItems = unwrapList(warehouses.data);
+  const ingredientItems = unwrapList(ingredientsCatalog.data);
 
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -147,8 +154,32 @@ export function ProductForm({
   const [shortDescriptionAr, setShortDescriptionAr] = useState("");
   const [description, setDescription] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [ingredientsAr, setIngredientsAr] = useState("");
+  const [linkedIngredientIds, setLinkedIngredientIds] = useState<number[]>([]);
+  const [extraIngredientOptions, setExtraIngredientOptions] = useState<
+    Array<{ value: string; label: string; keywords: string }>
+  >([]);
+  const [creatingIngredient, setCreatingIngredient] = useState(false);
+
+  const ingredientOptions = useMemo(() => {
+    const fromApi = ingredientItems
+      .map((item) => {
+        const id = Number(item.id);
+        if (!Number.isFinite(id)) return null;
+        const name = String(item.name ?? item.slug ?? `#${id}`);
+        const inactive = item.is_active === false;
+        return {
+          value: String(id),
+          label: inactive ? `${name} (inactive)` : name,
+          keywords: String(item.slug ?? ""),
+        };
+      })
+      .filter((o): o is { value: string; label: string; keywords: string } =>
+        Boolean(o),
+      );
+    const seen = new Set(fromApi.map((o) => o.value));
+    const extras = extraIngredientOptions.filter((o) => !seen.has(o.value));
+    return [...fromApi, ...extras];
+  }, [ingredientItems, extraIngredientOptions]);
   const [usage, setUsage] = useState("");
   const [usageAr, setUsageAr] = useState("");
   const [seoTitle, setSeoTitle] = useState("");
@@ -177,8 +208,14 @@ export function ProductForm({
     setShortDescriptionAr(String(initial.short_description_ar ?? ""));
     setDescription(String(initial.description ?? ""));
     setDescriptionAr(String(initial.description_ar ?? ""));
-    setIngredients(String(initial.ingredients ?? ""));
-    setIngredientsAr(String(initial.ingredients_ar ?? ""));
+    const linked = Array.isArray(initial.linked_ingredients)
+      ? (initial.linked_ingredients as Record<string, unknown>[])
+      : [];
+    setLinkedIngredientIds(
+      linked
+        .map((row) => Number(row.id))
+        .filter((id) => Number.isFinite(id) && id > 0),
+    );
     setUsage(String(initial.usage_instructions ?? ""));
     setUsageAr(String(initial.usage_instructions_ar ?? ""));
     setSeoTitle(String(initial.seo_title ?? ""));
@@ -309,8 +346,7 @@ export function ProductForm({
       short_description_ar: emptyToNull(shortDescriptionAr),
       description: emptyToNull(description),
       description_ar: emptyToNull(descriptionAr),
-      ingredients: emptyToNull(ingredients),
-      ingredients_ar: emptyToNull(ingredientsAr),
+      ingredient_ids: linkedIngredientIds,
       usage_instructions: emptyToNull(usage),
       usage_instructions_ar: emptyToNull(usageAr),
       seo_title: emptyToNull(seoTitle),
@@ -475,25 +511,71 @@ export function ProductForm({
           </FormField>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Ingredients" htmlFor="ingredients">
-            <Textarea
-              id="ingredients"
-              rows={3}
-              value={ingredients}
-              onChange={(e) => setIngredients(e.target.value)}
-            />
-          </FormField>
-          <FormField label="Ingredients (AR)" htmlFor="ingredients-ar">
-            <Textarea
-              id="ingredients-ar"
-              dir="rtl"
-              rows={3}
-              value={ingredientsAr}
-              onChange={(e) => setIngredientsAr(e.target.value)}
-            />
-          </FormField>
-        </div>
+        <FormField label="Ingredients" htmlFor="linked-ingredients">
+          <SearchableMultiSelect
+            id="linked-ingredients"
+            values={linkedIngredientIds.map(String)}
+            onChange={(next) =>
+              setLinkedIngredientIds(
+                next
+                  .map((v) => Number(v))
+                  .filter((id) => Number.isFinite(id) && id > 0),
+              )
+            }
+            options={ingredientOptions}
+            placeholder={
+              ingredientsCatalog.loading
+                ? "Loading ingredients…"
+                : "Search and select ingredients…"
+            }
+            searchPlaceholder="Search ingredients…"
+            emptyMessage="No matching ingredients."
+            disabled={ingredientsCatalog.loading}
+            allowCreate
+            creating={creatingIngredient}
+            onCreate={async (name) => {
+              setCreatingIngredient(true);
+              setError(null);
+              try {
+                const res = await ingredientsApi.create({
+                  name,
+                  slug: slugify(name),
+                  is_active: true,
+                });
+                const created = res.data as {
+                  id?: number;
+                  name?: string;
+                  slug?: string;
+                };
+                const newId = Number(created?.id);
+                if (Number.isFinite(newId) && newId > 0) {
+                  const label = String(created.name ?? name);
+                  setExtraIngredientOptions((prev) => [
+                    ...prev.filter((o) => o.value !== String(newId)),
+                    {
+                      value: String(newId),
+                      label,
+                      keywords: String(created.slug ?? slugify(name)),
+                    },
+                  ]);
+                  setLinkedIngredientIds((prev) =>
+                    prev.includes(newId) ? prev : [...prev, newId],
+                  );
+                }
+                ingredientsCatalog.reload();
+              } catch (err) {
+                setError(getFormErrorMessage(err));
+                setFieldErrors(getFieldErrors(err));
+              } finally {
+                setCreatingIngredient(false);
+              }
+            }}
+          />
+          <FieldHint>
+            Multi-select from the ingredients catalog. Type to search, or add a
+            new ingredient when it doesn’t exist.
+          </FieldHint>
+        </FormField>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Usage instructions" htmlFor="usage">

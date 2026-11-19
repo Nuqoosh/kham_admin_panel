@@ -27,6 +27,13 @@ export const ritualQuizApi = {
     });
   },
 
+  archiveQuestion(questionId: number | string) {
+    return apiRequest<unknown>(
+      `/ritual-quiz/questions/${questionId}/archive`,
+      { method: "POST" },
+    );
+  },
+
   createOption(questionId: number | string, payload: RitualQuizOptionInput) {
     return apiRequest<unknown>(`/ritual-quiz/questions/${questionId}/options`, {
       method: "POST",
@@ -41,6 +48,12 @@ export const ritualQuizApi = {
     return apiRequest<unknown>(`/ritual-quiz/options/${optionId}`, {
       method: "PATCH",
       body: payload,
+    });
+  },
+
+  archiveOption(optionId: number | string) {
+    return apiRequest<unknown>(`/ritual-quiz/options/${optionId}/archive`, {
+      method: "POST",
     });
   },
 

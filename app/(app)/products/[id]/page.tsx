@@ -271,11 +271,30 @@ export default function ProductDetailPage() {
                 en={product.description}
                 ar={product.description_ar}
               />
-              <BilingualField
-                title="Ingredients"
-                en={product.ingredients}
-                ar={product.ingredients_ar}
-              />
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-brown">
+                  Linked ingredients
+                </p>
+                {Array.isArray(product.linked_ingredients) &&
+                (product.linked_ingredients as unknown[]).length > 0 ? (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {(
+                      product.linked_ingredients as Record<string, unknown>[]
+                    ).map((ing) => (
+                      <li key={String(ing.id)}>
+                        <Badge variant="outline">
+                          {String(ing.name ?? ing.slug ?? `#${ing.id}`)}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    None linked — edit the product to select from the
+                    ingredients catalog.
+                  </p>
+                )}
+              </div>
               <BilingualField
                 title="Usage instructions"
                 en={product.usage_instructions}

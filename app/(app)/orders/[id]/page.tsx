@@ -4,11 +4,14 @@ import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ordersApi,
+  paymentsApi,
   refundsApi,
   type OrderStatus,
 } from "@/lib/api";
 import { getFormErrorMessage } from "@/lib/form";
 import { unwrapList, useApi } from "@/lib/hooks/use-api";
+import { useAuthStore } from "@/lib/auth-store";
+import { can } from "@/lib/permissions";
 import { BackLink, PageHeader } from "@/components/page-header";
 import { FormAlert } from "@/components/form-alert";
 import { Button } from "@/components/ui/button";
@@ -61,6 +64,17 @@ export default function OrderDetailPage() {
   const [refundError, setRefundError] = useState<string | null>(null);
   const [auditText, setAuditText] = useState<string | null>(null);
 
+  const user = useAuthStore((s) => s.user);
+  const canApproveRefund = can(user, "refunds.approve");
+  const canManageOrders = can(user, "orders.manage");
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [payInfo, setPayInfo] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "KNET"
+  >("CARD");
+  const [enquiryPaymentId, setEnquiryPaymentId] = useState("");
+
   async function updateStatus() {
     if (!status) return;
     setSaving(true);
@@ -111,6 +125,111 @@ export default function OrderDetailPage() {
       setRefundError(getFormErrorMessage(err));
     } finally {
       setRefundActionId(null);
+    }
+  }
+
+  async function rejectRefund(refundId: string) {
+    const reason = window.prompt(
+      "Reject reason (required, min 5 characters):",
+      "Does not meet refund policy",
+    );
+    if (!reason || reason.trim().length < 5) return;
+    if (!confirm("Reject this refund request? No provider refund will run.")) {
+      return;
+    }
+    setRefundActionId(refundId);
+    setRefundError(null);
+    setAuditText(null);
+    try {
+      await refundsApi.reject(refundId, reason.trim());
+      reloadRefunds();
+      reload();
+    } catch (err) {
+      setRefundError(getFormErrorMessage(err));
+    } finally {
+      setRefundActionId(null);
+    }
+  }
+
+  async function cancelRefund(refundId: string) {
+    if (
+      !confirm(
+        "Cancel this refund request? Only the original requester can cancel.",
+      )
+    ) {
+      return;
+    }
+    setRefundActionId(refundId);
+    setRefundError(null);
+    setAuditText(null);
+    try {
+      await refundsApi.cancel(refundId);
+      reloadRefunds();
+      reload();
+    } catch (err) {
+      setRefundError(getFormErrorMessage(err));
+    } finally {
+      setRefundActionId(null);
+    }
+  }
+
+  async function startSandboxPayment() {
+    setPayBusy(true);
+    setPayError(null);
+    setPayInfo(null);
+    try {
+      const key = `dash-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      const res = await paymentsApi.startMyFatoorahSandboxHosted(id, {
+        idempotency_key: key,
+        payment_method: paymentMethod,
+      });
+      const data = res.data as Record<string, unknown>;
+      const url =
+        typeof data.payment_url === "string"
+          ? data.payment_url
+          : typeof data.redirect_url === "string"
+            ? data.redirect_url
+            : null;
+      setPayInfo(
+        url
+          ? `Sandbox payment initiated. Open: ${url}`
+          : `Sandbox payment response: ${JSON.stringify(data)}`,
+      );
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      reload();
+    } catch (err) {
+      setPayError(getFormErrorMessage(err));
+    } finally {
+      setPayBusy(false);
+    }
+  }
+
+  async function checkSandboxStatus() {
+    setPayBusy(true);
+    setPayError(null);
+    try {
+      const res = await paymentsApi.myFatoorahSandboxStatus(id);
+      setPayInfo(`Status: ${JSON.stringify(res.data)}`);
+    } catch (err) {
+      setPayError(getFormErrorMessage(err));
+    } finally {
+      setPayBusy(false);
+    }
+  }
+
+  async function runProviderEnquiry() {
+    if (!enquiryPaymentId.trim()) return;
+    setPayBusy(true);
+    setPayError(null);
+    try {
+      const res = await paymentsApi.myFatoorahProviderEnquiry(id, {
+        payment_id: enquiryPaymentId.trim(),
+      });
+      setPayInfo(`Enquiry: ${JSON.stringify(res.data)}`);
+    } catch (err) {
+      setPayError(getFormErrorMessage(err));
+    } finally {
+      setPayBusy(false);
     }
   }
 
@@ -259,6 +378,81 @@ export default function OrderDetailPage() {
             </Table>
           </div>
 
+          {canManageOrders ? (
+            <div className="space-y-4 rounded-xl bg-paper p-6 ring-1 ring-border">
+              <h2 className="font-display text-2xl">MyFatoorah sandbox</h2>
+              <p className="text-xs text-muted-foreground">
+                Local/testing only. Backend returns 404 unless sandbox flags and
+                an HTTPS redirect URL are configured.
+              </p>
+              <FormAlert error={payError} />
+              {payInfo ? (
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-xs">
+                  {payInfo}
+                </pre>
+              ) : null}
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                  Method
+                  <SelectNative
+                    className="mt-2 w-44"
+                    value={paymentMethod}
+                    onChange={(e) =>
+                      setPaymentMethod(
+                        e.target.value as
+                          | "CARD"
+                          | "APPLE_PAY"
+                          | "GOOGLE_PAY"
+                          | "KNET",
+                      )
+                    }
+                  >
+                    <option value="CARD">CARD</option>
+                    <option value="APPLE_PAY">APPLE_PAY</option>
+                    <option value="GOOGLE_PAY">GOOGLE_PAY</option>
+                    <option value="KNET">KNET</option>
+                  </SelectNative>
+                </label>
+                <Button
+                  type="button"
+                  disabled={payBusy}
+                  onClick={() => void startSandboxPayment()}
+                >
+                  {payBusy ? "Working…" : "Start sandbox hosted"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-paper"
+                  disabled={payBusy}
+                  onClick={() => void checkSandboxStatus()}
+                >
+                  Check status
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="min-w-[220px] flex-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                  Provider payment id
+                  <Input
+                    className="mt-2"
+                    value={enquiryPaymentId}
+                    onChange={(e) => setEnquiryPaymentId(e.target.value)}
+                    placeholder="MyFatoorah payment id"
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-paper"
+                  disabled={payBusy || !enquiryPaymentId.trim()}
+                  onClick={() => void runProviderEnquiry()}
+                >
+                  Provider enquiry
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="space-y-4 rounded-xl bg-paper p-6 ring-1 ring-border">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-2xl">Refunds</h2>
@@ -330,8 +524,13 @@ export default function OrderDetailPage() {
                     const statusLabel = String(
                       row.status ?? row.state ?? "pending",
                     ).toLowerCase();
-                    const canApprove =
-                      statusLabel === "pending" || statusLabel === "requested";
+                    const pending =
+                      statusLabel === "pending" ||
+                      statusLabel === "requested" ||
+                      statusLabel === "pending_approval";
+                    const canApprove = canApproveRefund && pending;
+                    const canReject = canApproveRefund && pending;
+                    const canCancel = canManageOrders && pending;
                     return (
                       <TableRow key={refundId}>
                         <TableCell className="tabular-nums">{refundId}</TableCell>
@@ -360,6 +559,28 @@ export default function OrderDetailPage() {
                                 onClick={() => approveRefund(refundId)}
                               >
                                 Approve
+                              </Button>
+                            ) : null}
+                            {canReject ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={refundActionId === refundId}
+                                onClick={() => rejectRefund(refundId)}
+                              >
+                                Reject
+                              </Button>
+                            ) : null}
+                            {canCancel ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={refundActionId === refundId}
+                                onClick={() => cancelRefund(refundId)}
+                              >
+                                Cancel
                               </Button>
                             ) : null}
                           </div>

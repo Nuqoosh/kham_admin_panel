@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import { humanizeFieldKey } from "@/lib/form";
+
 export function FormAlert({
   error,
   fieldErrors,
@@ -10,13 +13,18 @@ export function FormAlert({
   }
 
   return (
-    <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-      {error ? <p>{error}</p> : null}
+    <div
+      role="alert"
+      className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+    >
+      {error ? <p className="font-medium leading-relaxed">{error}</p> : null}
       {fieldErrors && Object.keys(fieldErrors).length > 0 ? (
-        <ul className="mt-2 list-disc space-y-1 ps-5">
+        <ul className="mt-2 list-disc space-y-1 ps-5 text-destructive/90">
           {Object.entries(fieldErrors).map(([field, message]) => (
             <li key={field}>
-              <span className="font-medium">{field}</span>: {message}
+              <span className="font-medium">{humanizeFieldKey(field)}</span>
+              {": "}
+              {message}
             </li>
           ))}
         </ul>
@@ -25,7 +33,16 @@ export function FormAlert({
   );
 }
 
-export function FieldHint({ error }: { error?: string }) {
-  if (!error) return null;
-  return <p className="text-xs text-destructive">{error}</p>;
+export function FieldHint({
+  error,
+  children,
+}: {
+  error?: string;
+  children?: ReactNode;
+}) {
+  if (error) {
+    return <p className="mt-1.5 text-xs text-destructive">{error}</p>;
+  }
+  if (!children) return null;
+  return <p className="mt-1.5 text-xs text-muted-brown">{children}</p>;
 }

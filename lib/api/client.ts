@@ -118,22 +118,7 @@ export async function apiRequest<T>(
     if (response.status === 401 && auth) {
       emitUnauthorized();
     }
-
-    const errorBody =
-      json && "success" in json && json.success === false
-        ? json
-        : null;
-
-    throw new ApiClientError(
-      errorBody?.message ||
-        `Request failed with status ${response.status}`,
-      {
-        status: response.status,
-        code: errorBody?.code,
-        errors: errorBody?.errors,
-        body: errorBody,
-      },
-    );
+    throw toApiClientError(response.status, json);
   }
 
   return json;
@@ -188,23 +173,89 @@ export async function apiFormRequest<T>(
     if (response.status === 401 && auth) {
       emitUnauthorized();
     }
-
-    const errorBody =
-      json && "success" in json && json.success === false ? json : null;
-
-    throw new ApiClientError(
-      errorBody?.message ||
-        `Request failed with status ${response.status}`,
-      {
-        status: response.status,
-        code: errorBody?.code,
-        errors: errorBody?.errors,
-        body: errorBody,
-      },
-    );
+    throw toApiClientError(response.status, json);
   }
 
   return json;
+}
+
+function normalizeFieldErrors(
+  raw: unknown,
+): Record<string, string[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (Array.isArray(value)) {
+      const msgs = value.filter((v): v is string => typeof v === "string" && v.trim() !== "");
+      if (msgs.length) out[key] = msgs;
+    } else if (typeof value === "string" && value.trim() !== "") {
+      out[key] = [value];
+    }
+  }
+  return out;
+}
+
+function fallbackStatusMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return "The request could not be processed. Please review your input.";
+    case 403:
+      return "You do not have permission to perform this action.";
+    case 404:
+      return "The requested resource was not found.";
+    case 409:
+      return "This conflicts with existing data. Please change the conflicting value and try again.";
+    case 422:
+      return "Please check the highlighted fields and try again.";
+    case 429:
+      return "Too many attempts. Please wait a moment and try again.";
+    case 500:
+    case 502:
+    case 503:
+      return "The server could not complete this request. Please try again.";
+    default:
+      return `Request failed with status ${status}.`;
+  }
+}
+
+function toApiClientError(
+  status: number,
+  json: ApiSuccess<unknown> | ApiErrorBody | Record<string, unknown> | null,
+): ApiClientError {
+  if (json && typeof json === "object") {
+    const record = json as Record<string, unknown>;
+    const errors = normalizeFieldErrors(record.errors);
+
+    if (record.success === false) {
+      const body = json as ApiErrorBody;
+      return new ApiClientError(
+        (typeof body.message === "string" && body.message.trim()) ||
+          fallbackStatusMessage(status),
+        {
+          status,
+          code: body.code || "ERROR",
+          errors: normalizeFieldErrors(body.errors) || errors,
+          body,
+        },
+      );
+    }
+
+    if (typeof record.message === "string" && record.message.trim()) {
+      return new ApiClientError(record.message.trim(), {
+        status,
+        code: typeof record.code === "string" ? record.code : "HTTP_ERROR",
+        errors,
+        body: null,
+      });
+    }
+  }
+
+  return new ApiClientError(fallbackStatusMessage(status), {
+    status,
+    code: "HTTP_ERROR",
+    errors: {},
+    body: null,
+  });
 }
 
 /** Append scalar/file fields for Laravel multipart endpoints. */

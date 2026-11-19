@@ -32,6 +32,11 @@ function buildProductFormData(payload: ProductMultipartInput): FormData {
     form.append("variants", JSON.stringify(payload.variants));
   }
 
+  // Always send on create/update so clearing the selection syncs an empty pivot.
+  if (payload.ingredient_ids !== undefined) {
+    form.append("ingredient_ids", JSON.stringify(payload.ingredient_ids));
+  }
+
   if (payload.images?.length) {
     for (const file of payload.images) {
       form.append("images[]", file);

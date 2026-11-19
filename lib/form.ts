@@ -19,9 +19,55 @@ export function parseOptionalNumber(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function getFormErrorMessage(error: unknown, fallback = "Request failed"): string {
-  if (error instanceof ApiClientError) return error.message || fallback;
-  if (error instanceof Error) return error.message;
+/** Turn API field keys like variants.0.barcode into readable labels. */
+export function humanizeFieldKey(field: string): string {
+  return field
+    .split(".")
+    .map((part) => {
+      if (/^\d+$/.test(part)) return `Item ${Number(part) + 1}`;
+      return part
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    })
+    .join(" · ");
+}
+
+function humanizeServerMessage(message: string): string {
+  const msg = message.trim();
+  if (!msg) return msg;
+
+  if (/Duplicate entry/i.test(msg) && /barcode/i.test(msg)) {
+    return "A variant barcode is already in use. Use a unique barcode or leave it blank.";
+  }
+  if (/Duplicate entry/i.test(msg) && /sku/i.test(msg)) {
+    return "A variant SKU is already in use. Please choose a unique SKU.";
+  }
+  if (/Duplicate entry/i.test(msg) && /slug/i.test(msg)) {
+    return "This slug is already in use. Please choose another.";
+  }
+  if (/SQLSTATE|Integrity constraint|QueryException/i.test(msg)) {
+    return "Could not save because of a data conflict. Check unique fields (SKU, barcode, slug) and try again.";
+  }
+
+  return msg;
+}
+
+export function getFormErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+): string {
+  if (error instanceof ApiClientError) {
+    const primary = humanizeServerMessage(error.message || "");
+    if (primary) return primary;
+
+    const firstField = Object.values(error.errors ?? {}).flat()[0];
+    if (firstField) return firstField;
+
+    return fallback;
+  }
+  if (error instanceof Error) {
+    return humanizeServerMessage(error.message) || fallback;
+  }
   return fallback;
 }
 

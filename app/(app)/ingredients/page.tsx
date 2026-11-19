@@ -31,6 +31,7 @@ export default function IngredientsPage() {
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [archiveBusyId, setArchiveBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -85,6 +86,29 @@ export default function IngredientsPage() {
       setFieldErrors(getFieldErrors(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function archiveIngredient(row: Record<string, unknown>) {
+    const id = String(row.id);
+    if (row.is_active === false) return;
+    if (
+      !confirm(
+        `Archive “${String(row.name ?? id)}”? It will be deactivated on the storefront; linked products stay intact.`,
+      )
+    ) {
+      return;
+    }
+    setArchiveBusyId(id);
+    setError(null);
+    try {
+      await ingredientsApi.archive(id);
+      if (editingId === id) resetForm();
+      reload();
+    } catch (err) {
+      setError(getFormErrorMessage(err));
+    } finally {
+      setArchiveBusyId(null);
     }
   }
 
@@ -168,9 +192,29 @@ export default function IngredientsPage() {
                   <Badge variant="secondary">{row.is_active === false ? "Inactive" : "Active"}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Button type="button" variant="outline" size="sm" onClick={() => startEdit(row)}>
-                    Edit
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(row)}
+                    >
+                      Edit
+                    </Button>
+                    {row.is_active !== false ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={archiveBusyId === String(row.id)}
+                        onClick={() => void archiveIngredient(row)}
+                      >
+                        {archiveBusyId === String(row.id)
+                          ? "Archiving…"
+                          : "Archive"}
+                      </Button>
+                    ) : null}
+                  </div>
                 </TableCell>
               </TableRow>
             ))

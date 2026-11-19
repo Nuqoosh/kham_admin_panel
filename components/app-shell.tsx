@@ -30,29 +30,30 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
+import { can } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/brands", label: "Brands", icon: Leaf },
-  { href: "/categories", label: "Categories", icon: FolderTree },
-  { href: "/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/inventory", label: "Inventory", icon: Warehouse },
-  { href: "/pricing", label: "Pricing", icon: BadgeDollarSign },
-  { href: "/coupons", label: "Coupons", icon: TicketPercent },
-  { href: "/homepage", label: "Homepage", icon: PanelsTopLeft },
-  { href: "/rituals", label: "Rituals", icon: Sparkles },
-  { href: "/ritual-quiz", label: "Ritual quiz", icon: HelpCircle },
-  { href: "/ingredients", label: "Ingredients", icon: FlaskConical },
-  { href: "/reviews", label: "Reviews", icon: Star },
-  { href: "/partners", label: "Partners", icon: Handshake },
-  { href: "/newsletter", label: "Newsletter", icon: Mail },
-  { href: "/shipping", label: "Shipping", icon: Truck },
-  { href: "/tax", label: "Tax", icon: Percent },
-  { href: "/finance", label: "Finance", icon: Landmark },
-  { href: "/catalog", label: "Settings", icon: Settings2 },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, permissions: [] as string[] },
+  { href: "/products", label: "Products", icon: Package, permissions: ["products.view"] },
+  { href: "/brands", label: "Brands", icon: Leaf, permissions: ["products.view"] },
+  { href: "/categories", label: "Categories", icon: FolderTree, permissions: ["products.view"] },
+  { href: "/orders", label: "Orders", icon: ShoppingBag, permissions: ["orders.view"] },
+  { href: "/customers", label: "Customers", icon: Users, permissions: ["customers.view"] },
+  { href: "/inventory", label: "Inventory", icon: Warehouse, permissions: ["inventory.view"] },
+  { href: "/pricing", label: "Pricing", icon: BadgeDollarSign, permissions: ["products.view"] },
+  { href: "/coupons", label: "Coupons", icon: TicketPercent, permissions: ["coupons.view", "products.view"] },
+  { href: "/homepage", label: "Homepage", icon: PanelsTopLeft, permissions: ["products.view"] },
+  { href: "/rituals", label: "Rituals", icon: Sparkles, permissions: ["products.view"] },
+  { href: "/ritual-quiz", label: "Ritual quiz", icon: HelpCircle, permissions: ["products.view"] },
+  { href: "/ingredients", label: "Ingredients", icon: FlaskConical, permissions: ["products.view"] },
+  { href: "/reviews", label: "Reviews", icon: Star, permissions: ["products.view"] },
+  { href: "/partners", label: "Partners", icon: Handshake, permissions: ["customers.view"] },
+  { href: "/newsletter", label: "Newsletter", icon: Mail, permissions: ["customers.view"] },
+  { href: "/shipping", label: "Shipping", icon: Truck, permissions: ["finance.view", "products.view"] },
+  { href: "/tax", label: "Tax", icon: Percent, permissions: ["finance.view", "tax.approve"] },
+  { href: "/finance", label: "Finance", icon: Landmark, permissions: ["finance.view"] },
+  { href: "/catalog", label: "Settings", icon: Settings2, permissions: ["products.view"] },
 ];
 
 const SIDEBAR_KEY = "kham_sidebar_open";
@@ -143,7 +144,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             open ? "px-3" : "items-center px-2",
           )}
         >
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {NAV.filter((item) => can(user, ...item.permissions)).map(
+            ({ href, label, icon: Icon }) => {
             const active =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
@@ -163,7 +165,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {open ? <span className="truncate">{label}</span> : null}
               </Link>
             );
-          })}
+          },
+          )}
         </nav>
 
         <div

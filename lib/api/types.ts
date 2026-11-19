@@ -100,6 +100,8 @@ export type ProductRequest = {
   seo_description?: string | null;
   seo_description_ar?: string | null;
   metadata?: Record<string, unknown> | null;
+  /** Linked catalog ingredient ids (pivot ingredient_product). */
+  ingredient_ids?: number[];
   variants?: ProductVariantInput[];
 };
 

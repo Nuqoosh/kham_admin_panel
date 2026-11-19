@@ -27,4 +27,19 @@ export const refundsApi = {
       body: payload,
     });
   },
+
+  /** Requires `refunds.approve`; requester cannot reject their own request. */
+  reject(refundId: number | string, reason: string) {
+    return apiRequest<unknown>(`/refund-requests/${refundId}/reject`, {
+      method: "POST",
+      body: { reason },
+    });
+  },
+
+  /** Original requester only; uses `orders.manage`. */
+  cancel(refundId: number | string) {
+    return apiRequest<unknown>(`/refund-requests/${refundId}/cancel`, {
+      method: "POST",
+    });
+  },
 };

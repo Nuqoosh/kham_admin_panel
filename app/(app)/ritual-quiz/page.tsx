@@ -40,6 +40,7 @@ export default function RitualQuizPage() {
   const [syncOptionId, setSyncOptionId] = useState("");
   const [syncProducts, setSyncProducts] = useState("");
   const [syncBusy, setSyncBusy] = useState(false);
+  const [archiveBusyKey, setArchiveBusyKey] = useState<string | null>(null);
 
   async function createQuestion(e: React.FormEvent) {
     e.preventDefault();
@@ -108,6 +109,52 @@ export default function RitualQuizPage() {
       setError(getFormErrorMessage(err));
     } finally {
       setSyncBusy(false);
+    }
+  }
+
+  async function archiveQuestion(row: Record<string, unknown>) {
+    const id = String(row.id);
+    if (row.is_active === false) return;
+    if (
+      !confirm(
+        `Archive question #${id}? It will be hidden from the storefront quiz.`,
+      )
+    ) {
+      return;
+    }
+    setArchiveBusyKey(`q-${id}`);
+    setError(null);
+    try {
+      await ritualQuizApi.archiveQuestion(id);
+      if (optionQuestionId === id) setOptionQuestionId("");
+      reload();
+    } catch (err) {
+      setError(getFormErrorMessage(err));
+    } finally {
+      setArchiveBusyKey(null);
+    }
+  }
+
+  async function archiveOption(row: Record<string, unknown>) {
+    const id = String(row.id);
+    if (row.is_active === false) return;
+    if (
+      !confirm(
+        `Archive option #${id} (“${String(row.label ?? "")}”)? It will stop recommending products.`,
+      )
+    ) {
+      return;
+    }
+    setArchiveBusyKey(`o-${id}`);
+    setError(null);
+    try {
+      await ritualQuizApi.archiveOption(id);
+      if (syncOptionId === id) setSyncOptionId("");
+      reload();
+    } catch (err) {
+      setError(getFormErrorMessage(err));
+    } finally {
+      setArchiveBusyKey(null);
     }
   }
 
@@ -210,31 +257,56 @@ export default function RitualQuizPage() {
             <TableHead>Question</TableHead>
             <TableHead>Options</TableHead>
             <TableHead>Active</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {questions.length === 0 && !loading ? (
             <TableRow>
-              <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
                 No quiz questions yet.
               </TableCell>
             </TableRow>
           ) : (
             questions.map((q) => {
+              const qId = String(q.id);
               const options = Array.isArray(q.options)
                 ? (q.options as Record<string, unknown>[])
                 : [];
               return (
-                <TableRow key={String(q.id)}>
-                  <TableCell className="tabular-nums">{String(q.id)}</TableCell>
+                <TableRow key={qId}>
+                  <TableCell className="tabular-nums">{qId}</TableCell>
                   <TableCell className="font-medium">{String(q.question ?? "—")}</TableCell>
                   <TableCell>
-                    <ul className="space-y-1 text-sm">
-                      {options.map((o) => (
-                        <li key={String(o.id)}>
-                          #{String(o.id)} {String(o.label ?? "")}
-                        </li>
-                      ))}
+                    <ul className="space-y-2 text-sm">
+                      {options.map((o) => {
+                        const oId = String(o.id);
+                        const inactive = o.is_active === false;
+                        return (
+                          <li
+                            key={oId}
+                            className="flex flex-wrap items-center gap-2"
+                          >
+                            <span className={inactive ? "text-muted-foreground" : undefined}>
+                              #{oId} {String(o.label ?? "")}
+                              {inactive ? " (archived)" : ""}
+                            </span>
+                            {!inactive ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={archiveBusyKey === `o-${oId}`}
+                                onClick={() => void archiveOption(o)}
+                              >
+                                {archiveBusyKey === `o-${oId}`
+                                  ? "Archiving…"
+                                  : "Archive"}
+                              </Button>
+                            ) : null}
+                          </li>
+                        );
+                      })}
                       {options.length === 0 ? (
                         <li className="text-muted-foreground">No options</li>
                       ) : null}
@@ -244,6 +316,23 @@ export default function RitualQuizPage() {
                     <Badge variant="secondary">
                       {q.is_active === false ? "Inactive" : "Active"}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {q.is_active !== false ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={archiveBusyKey === `q-${qId}`}
+                        onClick={() => void archiveQuestion(q)}
+                      >
+                        {archiveBusyKey === `q-${qId}`
+                          ? "Archiving…"
+                          : "Archive"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Archived</span>
+                    )}
                   </TableCell>
                 </TableRow>
               );

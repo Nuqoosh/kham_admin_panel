@@ -23,4 +23,11 @@ export const ingredientsApi = {
       body: payload,
     });
   },
+
+  /** Soft-deactivate; linked products stay intact. */
+  archive(ingredientId: number | string) {
+    return apiRequest<unknown>(`/ingredients/${ingredientId}/archive`, {
+      method: "POST",
+    });
+  },
 };
